@@ -212,3 +212,7 @@ With npm 11+, `npm run dev` needs the `workerd` install script: run `npm install
 ## Tech stack
 
 TypeScript · Cloudflare Workers · Wrangler · KV · Spotify Web API · Telegram Bot API
+
+## License
+
+[MIT](LICENSE)
