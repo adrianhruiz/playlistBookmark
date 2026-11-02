@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "playlistbookmark",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "triggers": { "crons": ["* * * * *"] },
+  "kv_namespaces": [
+    // Created with `npx wrangler kv namespace create KV`; the id is not a secret.
+    { "binding": "KV", "id": "433583753ec0402188e627b879deaca2" }
+  ]
+  // Secrets (never commit them): SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET,
+  // TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, BASE_URL.
+  // Local: .dev.vars · Production: `npx wrangler secret put <NAME>`.
+}
