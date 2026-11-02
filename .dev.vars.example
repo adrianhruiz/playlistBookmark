@@ -1,0 +1,7 @@
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
+TELEGRAM_BOT_TOKEN=
+# Any random string; Telegram sends it back in every webhook call.
+TELEGRAM_WEBHOOK_SECRET=
+# Public URL of the Worker, without trailing slash.
+BASE_URL=https://playlistbookmark.<subdomain>.workers.dev

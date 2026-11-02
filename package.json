@@ -1,0 +1,19 @@
+{
+  "name": "playlistbookmark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Telegram bot that bookmarks where you left off in each Spotify playlist",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261102.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.156.1"
+  }
+}
