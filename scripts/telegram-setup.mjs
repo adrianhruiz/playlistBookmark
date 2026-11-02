@@ -7,6 +7,8 @@ const COMMANDS = [
   { command: "resume", description: "Resume a playlist where you left off" },
   { command: "save", description: "Save the current playlist at the exact second" },
   { command: "now", description: "What is playing, at which second, on which device" },
+  { command: "untrack", description: "Stop following a playlist" },
+  { command: "track", description: "Follow an ignored playlist again" },
 ];
 
 function loadDevVars(path = ".dev.vars") {

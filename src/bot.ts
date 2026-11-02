@@ -16,11 +16,15 @@ export interface BotDeps {
 }
 
 const RESUME_PREFIX = "resume:";
+const UNTRACK_PREFIX = "untrack:";
+const TRACK_PREFIX = "track:";
 
 const HELP = [
   "/resume — pick a playlist to resume where you left off",
   "/save — save the current playlist at the exact second",
   "/now — what is playing, at which second, on which device",
+  "/untrack — stop following a playlist",
+  "/track — follow an ignored playlist again",
 ].join("\n");
 
 const NOT_CONNECTED = "Spotify is not connected. Send /start to connect it.";
@@ -33,6 +37,10 @@ export async function handleUpdate(update: TelegramUpdate, deps: BotDeps): Promi
     if (chatId === undefined || !(await deps.owner.isOwner(chatId))) return;
     if (data?.startsWith(RESUME_PREFIX)) {
       await withSpotify(deps, chatId, () => resume(deps, chatId, data.slice(RESUME_PREFIX.length)));
+    } else if (data?.startsWith(UNTRACK_PREFIX)) {
+      await untrack(deps, chatId, data.slice(UNTRACK_PREFIX.length));
+    } else if (data?.startsWith(TRACK_PREFIX)) {
+      await retrack(deps, chatId, data.slice(TRACK_PREFIX.length));
     }
     return;
   }
@@ -56,6 +64,10 @@ export async function handleUpdate(update: TelegramUpdate, deps: BotDeps): Promi
       return withSpotify(deps, chatId, () => save(deps, chatId));
     case "/now":
       return withSpotify(deps, chatId, () => now(deps, chatId));
+    case "/untrack":
+      return listUntrackable(deps, chatId);
+    case "/track":
+      return listIgnored(deps, chatId);
     default:
       return deps.telegram.sendMessage(chatId, HELP);
   }
@@ -116,7 +128,15 @@ async function resume(deps: BotDeps, chatId: number, playlistId: string): Promis
 }
 
 async function save(deps: BotDeps, chatId: number): Promise<void> {
-  const bookmark = await saveCurrent(deps.spotify, deps.bookmarks, deps.now);
+  const playback = await deps.spotify.getPlayback();
+  const ignored = playback?.playlistId ? await deps.bookmarks.getIgnored(playback.playlistId) : null;
+  if (ignored) {
+    return deps.telegram.sendMessage(
+      chatId,
+      `You stopped following ${ignored.playlistName}. Send /track to follow it again.`,
+    );
+  }
+  const bookmark = await saveCurrent(deps.spotify, deps.bookmarks, deps.now, playback);
   if (!bookmark) return deps.telegram.sendMessage(chatId, "Nothing to save: no playlist is playing.");
   await deps.telegram.sendMessage(
     chatId,
@@ -136,4 +156,41 @@ async function now(deps: BotDeps, chatId: number): Promise<void> {
     playlistName ? `Playlist: ${playlistName}` : "Not playing from a playlist",
   ];
   await deps.telegram.sendMessage(chatId, lines.join("\n"));
+}
+
+async function listUntrackable(deps: BotDeps, chatId: number): Promise<void> {
+  const bookmarks = await deps.bookmarks.list();
+  if (bookmarks.length === 0) return deps.telegram.sendMessage(chatId, "No bookmarks to stop following.");
+  const buttons: InlineButton[][] = bookmarks.map((bookmark) => [
+    { text: bookmark.playlistName, callback_data: UNTRACK_PREFIX + bookmark.playlistId },
+  ]);
+  await deps.telegram.sendMessage(chatId, "Which playlist do you want to stop following?", buttons);
+}
+
+async function untrack(deps: BotDeps, chatId: number, playlistId: string): Promise<void> {
+  const bookmark = await deps.bookmarks.get(playlistId);
+  if (!bookmark) return deps.telegram.sendMessage(chatId, "I have no bookmark for that playlist anymore.");
+  await deps.bookmarks.ignore(playlistId, bookmark.playlistName);
+  await deps.telegram.sendMessage(
+    chatId,
+    `🚫 Stopped following ${bookmark.playlistName}. Send /track to follow it again.`,
+  );
+}
+
+async function listIgnored(deps: BotDeps, chatId: number): Promise<void> {
+  const ignored = await deps.bookmarks.listIgnored();
+  if (ignored.length === 0) return deps.telegram.sendMessage(chatId, "You are following every playlist.");
+  const buttons: InlineButton[][] = ignored.map((playlist) => [
+    { text: playlist.playlistName, callback_data: TRACK_PREFIX + playlist.playlistId },
+  ]);
+  await deps.telegram.sendMessage(chatId, "Which playlist do you want to follow again?", buttons);
+}
+
+async function retrack(deps: BotDeps, chatId: number, playlistId: string): Promise<void> {
+  const playlist = await deps.bookmarks.unignore(playlistId);
+  if (!playlist) return deps.telegram.sendMessage(chatId, "That playlist is already being followed.");
+  await deps.telegram.sendMessage(
+    chatId,
+    `✅ Following ${playlist.playlistName} again. Play it and I will bookmark it.`,
+  );
 }

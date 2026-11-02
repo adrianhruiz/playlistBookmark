@@ -206,3 +206,52 @@ describe("/save and /now", () => {
     expect(sent[0]!.text).toContain("/resume");
   });
 });
+
+describe("/untrack and /track", () => {
+  it("/untrack lists the bookmarked playlists to stop following", async () => {
+    const { deps, sent } = await setup();
+
+    await handleUpdate(text(OWNER, "/untrack"), deps);
+
+    expect(sent[0]!.text).toBe("Which playlist do you want to stop following?");
+    expect(sent[0]!.buttons).toEqual([[{ text: "Gym Mix", callback_data: "untrack:gym" }]]);
+  });
+
+  it("tapping a playlist deletes its bookmark and ignores it from then on", async () => {
+    const { deps, sent } = await setup();
+
+    await handleUpdate(tap("untrack:gym"), deps);
+
+    expect(await deps.bookmarks.get("gym")).toBeNull();
+    expect(await deps.bookmarks.isIgnored("gym")).toBe(true);
+    expect(sent.at(-1)!.text).toBe("🚫 Stopped following Gym Mix. Send /track to follow it again.");
+  });
+
+  it("/save refuses an ignored playlist", async () => {
+    const { deps, sent } = await setup();
+    await deps.bookmarks.ignore("focus", "Focus");
+
+    await handleUpdate(text(OWNER, "/save"), deps);
+
+    expect(await deps.bookmarks.get("focus")).toBeNull();
+    expect(sent[0]!.text).toBe("You stopped following Focus. Send /track to follow it again.");
+  });
+
+  it("/track lists ignored playlists and tapping one follows it again", async () => {
+    const { deps, sent } = await setup();
+    await handleUpdate(tap("untrack:gym"), deps);
+
+    await handleUpdate(text(OWNER, "/track"), deps);
+    expect(sent.at(-1)!.buttons).toEqual([[{ text: "Gym Mix", callback_data: "track:gym" }]]);
+
+    await handleUpdate(tap("track:gym"), deps);
+    expect(await deps.bookmarks.isIgnored("gym")).toBe(false);
+    expect(sent.at(-1)!.text).toBe("✅ Following Gym Mix again. Play it and I will bookmark it.");
+  });
+
+  it("/track says so when nothing is ignored", async () => {
+    const { deps, sent } = await setup();
+    await handleUpdate(text(OWNER, "/track"), deps);
+    expect(sent[0]!.text).toBe("You are following every playlist.");
+  });
+});

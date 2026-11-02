@@ -115,3 +115,18 @@ describe("saveCurrent", () => {
     expect(await saveCurrent(fakeSpotify(null), new BookmarkStore(new MemoryKv()), 1000)).toBeNull();
   });
 });
+
+describe("ignored playlists", () => {
+  it("are never bookmarked, neither from playback nor from recently-played", async () => {
+    const store = new BookmarkStore(new MemoryKv());
+    await store.ignore("gym", "Gym Mix");
+    await store.ignore("short", "Short");
+    const recent: RecentlyPlayedItem[] = [
+      { trackUri: "spotify:track:s1", trackName: "Short 1", artistName: "X", playlistId: "short", playedAt: HOUR },
+    ];
+
+    await track(fakeSpotify(playback(), recent), store, 2 * HOUR);
+
+    expect(await store.list()).toEqual([]);
+  });
+});

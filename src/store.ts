@@ -11,7 +11,13 @@ export interface Bookmark {
   updatedAt: number;
 }
 
+export interface IgnoredPlaylist {
+  playlistId: string;
+  playlistName: string;
+}
+
 const BOOKMARK_PREFIX = "bookmark:";
+const IGNORED_PREFIX = "ignored:";
 const OWNER_KEY = "owner:chat_id";
 const OAUTH_STATE_PREFIX = "oauth:state:";
 const OAUTH_STATE_TTL_SECONDS = 600;
@@ -36,6 +42,37 @@ export class BookmarkStore {
     return bookmarks
       .filter((bookmark): bookmark is Bookmark => bookmark !== null)
       .sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  /** Stops following a playlist: drops its bookmark and keeps the tracker away from it. */
+  async ignore(playlistId: string, playlistName: string): Promise<void> {
+    const ignored: IgnoredPlaylist = { playlistId, playlistName };
+    await this.kv.put(IGNORED_PREFIX + playlistId, JSON.stringify(ignored));
+    await this.kv.delete(BOOKMARK_PREFIX + playlistId);
+  }
+
+  async unignore(playlistId: string): Promise<IgnoredPlaylist | null> {
+    const ignored = await this.getIgnored(playlistId);
+    if (ignored) await this.kv.delete(IGNORED_PREFIX + playlistId);
+    return ignored;
+  }
+
+  async getIgnored(playlistId: string): Promise<IgnoredPlaylist | null> {
+    const raw = await this.kv.get(IGNORED_PREFIX + playlistId);
+    return raw ? (JSON.parse(raw) as IgnoredPlaylist) : null;
+  }
+
+  async isIgnored(playlistId: string): Promise<boolean> {
+    return (await this.getIgnored(playlistId)) !== null;
+  }
+
+  /** Ignored playlists, sorted by name. */
+  async listIgnored(): Promise<IgnoredPlaylist[]> {
+    const { keys } = await this.kv.list({ prefix: IGNORED_PREFIX });
+    const ignored = await Promise.all(keys.map((key) => this.getIgnored(key.name.slice(IGNORED_PREFIX.length))));
+    return ignored
+      .filter((playlist): playlist is IgnoredPlaylist => playlist !== null)
+      .sort((a, b) => a.playlistName.localeCompare(b.playlistName));
   }
 }
 

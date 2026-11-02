@@ -15,7 +15,7 @@ async function playlistName(spotify: Spotify, existing: Bookmark | null, playlis
 
 /**
  * Saves the current playlist at its exact position.
- * Returns the bookmark, or null when no playlist is playing.
+ * Returns the bookmark, or null when no playlist is playing or the playlist is ignored.
  */
 export async function saveCurrent(
   spotify: Spotify,
@@ -24,7 +24,7 @@ export async function saveCurrent(
   playback?: Playback | null,
 ): Promise<Bookmark | null> {
   const current = playback === undefined ? await spotify.getPlayback() : playback;
-  if (!current?.playlistId) return null;
+  if (!current?.playlistId || (await store.isIgnored(current.playlistId))) return null;
 
   const existing = await store.get(current.playlistId);
   // Paused on the same spot: skip the write (KV free tier allows 1,000 writes per day).
@@ -63,6 +63,7 @@ async function recoverMissedPlaylists(
   }
 
   for (const [playlistId, item] of latestByPlaylist) {
+    if (await store.isIgnored(playlistId)) continue;
     const existing = await store.get(playlistId);
     if (existing && (existing.updatedAt >= item.playedAt || existing.trackUri === item.trackUri)) continue;
     await store.save({

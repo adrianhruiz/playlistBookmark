@@ -66,6 +66,8 @@ Bot → "✅ Connected. Tracking your playlists."
 | `/resume` | Lists your bookmarked playlists. Tapping one saves the current playlist at the exact second, then resumes the chosen one. |
 | `/save` | Saves the current playlist at the exact second (use it before switching in the Spotify app). |
 | `/now` | Shows what is playing, at which second, and on which device. |
+| `/untrack` | Stops following a playlist: deletes its bookmark and ignores it from then on. |
+| `/track` | Follows an ignored playlist again. |
 
 In short: listen as usual, and open the bot only to resume.
 
@@ -162,7 +164,7 @@ npm run setup:telegram
 | `src/bot.ts` | Telegram commands |
 | `src/spotify.ts` | Spotify Web API and OAuth tokens |
 | `src/telegram.ts` | Telegram Bot API |
-| `src/store.ts` | KV records: bookmarks, owner, OAuth state |
+| `src/store.ts` | KV records: bookmarks, ignored playlists, owner, OAuth state |
 
 ## Tech stack
 
