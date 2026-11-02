@@ -34,3 +34,4 @@ Branch: `adrianhruiz/inicio` · Delivery: ask-on-risk · Test runner: `npm test`
 - L5: Next: T4 needs the user's Spotify app, Telegram bot token and Cloudflare login (README "Setup").
 - L6 (2026-11-02): "Entonces hace falta dos api keys, no? Puedes construir el resto mientras tanto?" → added `npm run setup:telegram` (commit 0b71aa9).
 - L7: Independent verifier (Risk item 2): S1–S8 pass, no blockers, 6 advisories. Fixed 1–5 in T5 (malformed body 500, owner race at /callback, group ownership, empty secret, failed token exchange). RED observed on 5 new tests, then 40/40 green, tsc clean.
+- L8 (2026-11-02): "si" → user authorized KV creation + first deploy. KV id 433583753ec0402188e627b879deaca2; Worker live at https://playlistbookmark.groveh8.workers.dev (version 0ca4eb09). No secrets set yet: webhook fails closed, cron idles. Spotify Feb 2026: Development Mode requires Premium (one app per developer, 5 users max); used endpoints still available.
