@@ -17,11 +17,13 @@ function html(body: string, status = 200) {
 }
 
 async function telegramWebhook(request: Request, env: Env): Promise<Response> {
-  if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== env.TELEGRAM_WEBHOOK_SECRET) {
+  // Fail closed: an unset secret must not turn authentication off.
+  const secret = env.TELEGRAM_WEBHOOK_SECRET;
+  if (!secret || request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== secret) {
     return new Response("Forbidden", { status: 403 });
   }
-  const update = (await request.json()) as TelegramUpdate;
   try {
+    const update = (await request.json()) as TelegramUpdate;
     await handleUpdate(update, {
       spotify: spotifyFor(env),
       telegram: new TelegramClient(env.TELEGRAM_BOT_TOKEN),
@@ -47,8 +49,21 @@ async function spotifyCallback(url: URL, env: Env): Promise<Response> {
   const chatId = await new OAuthStateStore(env.KV).consume(state);
   if (chatId === null) return html("This login link expired. Send /start to the bot again.", 400);
 
-  await spotifyFor(env).connect(code, `${env.BASE_URL}/callback`);
-  await new TelegramClient(env.TELEGRAM_BOT_TOKEN).sendMessage(chatId, "✅ Connected. Tracking your playlists.");
+  // A second chat may have raced the first /start; only the owner can link the Spotify account.
+  if (!(await new OwnerStore(env.KV).isOwner(chatId))) return html("This chat does not own the bot.", 403);
+
+  try {
+    await spotifyFor(env).connect(code, `${env.BASE_URL}/callback`);
+  } catch (error) {
+    console.error("Spotify token exchange failed", error);
+    return html("Spotify login failed. Send /start to the bot again.", 502);
+  }
+  try {
+    await new TelegramClient(env.TELEGRAM_BOT_TOKEN).sendMessage(chatId, "✅ Connected. Tracking your playlists.");
+  } catch (error) {
+    // Spotify is connected anyway; the confirmation message is a courtesy.
+    console.error("Failed to confirm the connection on Telegram", error);
+  }
   return html("✅ Connected. You can close this tab and go back to Telegram.");
 }
 

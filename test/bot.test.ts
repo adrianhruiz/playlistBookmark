@@ -67,7 +67,7 @@ async function setup(options: { playback?: Playback | null; playResult?: PlayRes
   return { kv, deps, sent, played, answered };
 }
 
-const text = (chatId: number, value: string) => ({ message: { chat: { id: chatId }, text: value } });
+const text = (chatId: number, value: string, type = "private") => ({ message: { chat: { id: chatId, type }, text: value } });
 const tap = (data: string) => ({ callback_query: { id: "cb-1", data, message: { chat: { id: OWNER } } } });
 
 describe("format", () => {
@@ -95,6 +95,24 @@ describe("/start", () => {
     expect(url.searchParams.get("redirect_uri")).toBe("https://bot.example/callback");
     const state = url.searchParams.get("state")!;
     expect(kv.data.get(`oauth:state:${state}`)).toBe(String(OWNER));
+  });
+
+  it("only a private chat can claim the bot", async () => {
+    const { deps, sent } = await setup({ owner: null });
+
+    await handleUpdate(text(-100, "/start", "group"), deps);
+
+    expect(sent).toEqual([]);
+    expect(await deps.owner.get()).toBeNull();
+  });
+
+  it("ignores resume taps from a chat that is not the owner", async () => {
+    const { deps, sent, played } = await setup();
+
+    await handleUpdate({ callback_query: { id: "cb-2", data: "resume:gym", message: { chat: { id: 7 } } } }, deps);
+
+    expect(played).toEqual([]);
+    expect(sent).toEqual([]);
   });
 
   it("ignores every chat that is not the owner", async () => {

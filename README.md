@@ -98,7 +98,7 @@ Without Premium the bot is a notebook. With Premium it is a remote control.
 | Up to ~1 min of position lost when you switch playlists in the Spotify app | The cron polls once a minute | Switch with `/resume`, or send `/save` first |
 | A playlist played for less than 1 min may be missed by the poll | It started and stopped between two polls | `recently-played` recovers it at track level |
 | Shuffle: the right song resumes, but the following order differs | The API does not expose the full queue | None |
-| The bot answers only the first chat that sent `/start` | It is a personal bot: that chat owns it | Delete the `owner:chat_id` KV key to reset |
+| The bot answers only the first private chat that sent `/start` | It is a personal bot: that chat owns it | Delete the `owner:chat_id` KV key to reset |
 | `/resume` fails if Spotify is not open on any device | Spotify needs an active device to play | The bot asks you to open Spotify and retry |
 | Paused or idle time does not count as a write, but listening does: about 1 KV write per minute | KV free tier allows 1,000 writes per day (~16 h of listening) | Writes are skipped while paused; move to D1 if it ever falls short |
 | Only one playlist plays at a time | A Spotify account has one active player | Not a real limit: the bookmarks cover alternating |

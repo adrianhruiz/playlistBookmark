@@ -3,7 +3,7 @@ import type { FetchFn } from "./env";
 export type InlineButton = { text: string; url: string } | { text: string; callback_data: string };
 
 export interface TelegramUpdate {
-  message?: { chat: { id: number }; text?: string };
+  message?: { chat: { id: number; type?: string }; text?: string };
   callback_query?: { id: string; data?: string; message?: { chat: { id: number } } };
 }
 

@@ -43,7 +43,8 @@ export async function handleUpdate(update: TelegramUpdate, deps: BotDeps): Promi
   const command = message.text.trim().split(/[\s@]/)[0];
 
   if (command === "/start") {
-    if (await deps.owner.claim(chatId)) await start(deps, chatId);
+    // Only a private chat may own the bot: in a group every member could control the playback.
+    if (message.chat.type === "private" && (await deps.owner.claim(chatId))) await start(deps, chatId);
     return;
   }
   if (!(await deps.owner.isOwner(chatId))) return;
