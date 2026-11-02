@@ -137,12 +137,10 @@ npx wrangler secret put BASE_URL                  # https://playlistbookmark.<su
 npm run deploy
 ```
 
-**4. Point Telegram at the Worker** (once):
+**4. Point Telegram at the Worker** (once): registers the webhook with its secret and publishes the command menu. Reads `.dev.vars` or the environment.
 
 ```bash
-curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
-  -d "url=<BASE_URL>/telegram" \
-  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+npm run setup:telegram
 ```
 
 **5.** Send `/start` to your bot and connect Spotify.
