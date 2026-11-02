@@ -2,7 +2,7 @@
 
 A Telegram bot that remembers where you left off in each Spotify playlist and lets you resume it from that exact song and second — on any device, with no PC or server of your own running.
 
-> **Status:** in design. Nothing is implemented yet.
+> **Status:** MVP implemented (tracker, `/start`, `/resume`, `/save`, `/now`). Not deployed yet.
 
 ## The problem
 
@@ -98,7 +98,9 @@ Without Premium the bot is a notebook. With Premium it is a remote control.
 | Up to ~1 min of position lost when you switch playlists in the Spotify app | The cron polls once a minute | Switch with `/resume`, or send `/save` first |
 | A playlist played for less than 1 min may be missed by the poll | It started and stopped between two polls | `recently-played` recovers it at track level |
 | Shuffle: the right song resumes, but the following order differs | The API does not expose the full queue | None |
+| The bot answers only the first chat that sent `/start` | It is a personal bot: that chat owns it | Delete the `owner:chat_id` KV key to reset |
 | `/resume` fails if Spotify is not open on any device | Spotify needs an active device to play | The bot asks you to open Spotify and retry |
+| Paused or idle time does not count as a write, but listening does: about 1 KV write per minute | KV free tier allows 1,000 writes per day (~16 h of listening) | Writes are skipped while paused; move to D1 if it ever falls short |
 | Only one playlist plays at a time | A Spotify account has one active player | Not a real limit: the bookmarks cover alternating |
 
 ## Requirements
@@ -109,6 +111,60 @@ Without Premium the bot is a notebook. With Premium it is a remote control.
 - Spotify Premium for one-tap resume (optional, see above).
 
 Secrets go in `.dev.vars` locally (git-ignored) and in `wrangler secret put` for production — never in the repository.
+
+## Setup
+
+```bash
+npm install
+cp .dev.vars.example .dev.vars   # fill in the values
+npm test                         # offline unit tests
+```
+
+**1. Spotify** — create an app in the [Developer Dashboard](https://developer.spotify.com/dashboard) and add the redirect URI `<BASE_URL>/callback`.
+
+**2. Telegram** — create a bot with [@BotFather](https://t.me/BotFather) and copy its token.
+
+**3. Cloudflare**
+
+```bash
+npx wrangler login
+npx wrangler kv namespace create KV         # paste the id into wrangler.jsonc
+npx wrangler secret put SPOTIFY_CLIENT_ID
+npx wrangler secret put SPOTIFY_CLIENT_SECRET
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+npx wrangler secret put TELEGRAM_WEBHOOK_SECRET   # any random string
+npx wrangler secret put BASE_URL                  # https://playlistbookmark.<subdomain>.workers.dev
+npm run deploy
+```
+
+**4. Point Telegram at the Worker** (once):
+
+```bash
+curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+  -d "url=<BASE_URL>/telegram" \
+  -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+
+**5.** Send `/start` to your bot and connect Spotify.
+
+### Routes
+
+| Route | Purpose |
+|-------|---------|
+| `POST /telegram` | Telegram webhook; rejects calls without the `X-Telegram-Bot-Api-Secret-Token` header |
+| `GET /callback` | Spotify OAuth redirect; stores the refresh token in KV |
+| cron `* * * * *` | Tracker tick; does nothing until Spotify is connected |
+
+### Code map
+
+| File | Role |
+|------|------|
+| `src/index.ts` | Worker entry: routes and cron |
+| `src/tracker.ts` | Cron logic: one bookmark per playlist, recovery from recently-played |
+| `src/bot.ts` | Telegram commands |
+| `src/spotify.ts` | Spotify Web API and OAuth tokens |
+| `src/telegram.ts` | Telegram Bot API |
+| `src/store.ts` | KV records: bookmarks, owner, OAuth state |
 
 ## Tech stack
 
